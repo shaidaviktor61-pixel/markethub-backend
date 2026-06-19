@@ -7,11 +7,14 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ✅ ИСПРАВЛЕННЫЙ CORS
 app.use(cors({
-  origin: '*',  // Разрешить запросы с любого домена
-  credentials: true
+  origin: 'https://markethub-frontend-nu.vercel.app', // Ваш фронтенд на Vercel
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 
 // Роуты
@@ -39,12 +42,11 @@ app.get('/', (req, res) => {
 // ✅ ИСПРАВЛЕННЫЙ маршрут для проверки БД
 app.get('/test-db', async (req, res) => {
   try {
-    // Убираем select и просто получаем всех пользователей
     const users = await prisma.user.findMany();
     res.json({ 
       message: 'БД подключена!', 
       users: users.map(user => ({
-        id: user.id,      // Теперь строка (UUID)
+        id: user.id,
         email: user.email,
         role: user.role,
         created_at: user.created_at
