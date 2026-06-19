@@ -18,6 +18,8 @@ app.use(express.json());
 // Роуты
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);
