@@ -4,7 +4,6 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
-
 // Все маршруты защищены — только для админов
 router.use(verifyToken, isAdmin);
 
@@ -39,13 +38,7 @@ router.get('/users', async (req, res) => {
     console.log('🔍 Запрос на /api/admin/users');
     
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        created_at: true
-      },
-      orderBy: { id: 'asc' }
+      orderBy: { created_at: 'desc' }
     });
     
     console.log(`✅ Найдено ${users.length} пользователей`);
@@ -70,7 +63,7 @@ router.patch('/users/:id/role', async (req, res) => {
     }
 
     const user = await prisma.user.update({
-      where: { id: id }, // ✅ Убрали parseInt (теперь строка UUID)
+      where: { id: id },
       data: { role }
     });
 
@@ -121,7 +114,7 @@ router.patch('/orders/:id/status', async (req, res) => {
     }
 
     const order = await prisma.order.update({
-      where: { id: id }, // ✅ Убрали parseInt (теперь строка UUID)
+      where: { id: id },
       data: { status }
     });
 
@@ -158,15 +151,14 @@ router.get('/products', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = id; // ✅ Убрали parseInt (теперь строка UUID)
+    const userId = id;
 
-    // Нельзя удалять самого себя
-    if (userId === req.user.id) { // ✅ Сравниваем строки (UUID)
+    if (userId === req.user.id) {
       return res.status(400).json({ error: 'Нельзя удалить самого себя' });
     }
 
     await prisma.user.delete({
-      where: { id: userId } // ✅ Строка (UUID)
+      where: { id: userId }
     });
 
     res.json({ message: 'Пользователь удалён' });
@@ -182,7 +174,7 @@ router.delete('/products/:id', async (req, res) => {
     const { id } = req.params;
 
     await prisma.product.delete({
-      where: { id: id } // ✅ Убрали parseInt (теперь строка UUID)
+      where: { id: id }
     });
 
     res.json({ message: 'Товар удалён' });
