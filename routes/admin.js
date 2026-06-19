@@ -1,14 +1,13 @@
-// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { authenticate, isAdmin } = require('../middleware/auth');
+const { verifyToken, isAdmin } = require('../middleware/auth');
 
-// Все маршруты админ-панели защищены
-router.use(authenticate, isAdmin);
+// Все маршруты защищены — только для админов
+router.use(verifyToken, isAdmin);
 
-// 📊 Получение статистики
+// 📊 Статистика
 router.get('/stats', async (req, res) => {
   try {
     const [usersCount, productsCount, ordersCount, totalRevenue] = await Promise.all([
@@ -28,6 +27,7 @@ router.get('/stats', async (req, res) => {
       revenue: totalRevenue._sum.total_amount || 0
     });
   } catch (error) {
+    console.error('❌ Ошибка в /stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -35,26 +35,35 @@ router.get('/stats', async (req, res) => {
 // 👥 Получение всех пользователей
 router.get('/users', async (req, res) => {
   try {
+    console.log('🔍 Запрос на /api/admin/users');
+    
     const users = await prisma.user.findMany({
       select: {
         id: true,
         email: true,
         role: true,
         created_at: true
-      }
+      },
+      orderBy: { id: 'asc' }
     });
+    
+    console.log(`✅ Найдено ${users.length} пользователей`);
     res.json({ users });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка в /users:', error);
+    res.status(500).json({ 
+      error: 'Ошибка загрузки пользователей',
+      details: error.message 
+    });
   }
 });
 
-// 👤 Изменение роли пользователя
+// 🔄 Изменение роли пользователя
 router.patch('/users/:id/role', async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    
+
     if (!['BUYER', 'SELLER', 'ADMIN'].includes(role)) {
       return res.status(400).json({ error: 'Недопустимая роль' });
     }
@@ -64,36 +73,29 @@ router.patch('/users/:id/role', async (req, res) => {
       data: { role }
     });
 
-    res.json({ user });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 🗑️ Удаление пользователя
-router.delete('/users/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.user.delete({
-      where: { id: parseInt(id) }
+    res.json({ 
+      message: 'Роль обновлена',
+      user: { id: user.id, email: user.email, role: user.role }
     });
-    res.json({ message: 'Пользователь удален' });
   } catch (error) {
+    console.error('❌ Ошибка изменения роли:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 📦 Получение всех заказов
+// 📦 Получение всех заказов с деталями
 router.get('/orders', async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: {
-        user: {
-          select: { email: true }
+        buyer: {
+          select: { id: true, email: true }
         },
         items: {
           include: {
-            product: true
+            product: {
+              select: { id: true, title: true, price: true }
+            }
           }
         }
       },
@@ -101,6 +103,7 @@ router.get('/orders', async (req, res) => {
     });
     res.json({ orders });
   } catch (error) {
+    console.error('❌ Ошибка в /orders:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -110,7 +113,7 @@ router.patch('/orders/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     const allowedStatuses = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ error: 'Недопустимый статус' });
@@ -121,8 +124,69 @@ router.patch('/orders/:id/status', async (req, res) => {
       data: { status }
     });
 
-    res.json({ order });
+    res.json({ 
+      message: 'Статус обновлён',
+      order: { id: order.id, status: order.status }
+    });
   } catch (error) {
+    console.error('❌ Ошибка изменения статуса заказа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 📦 Получение всех товаров
+router.get('/products', async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        category: true,
+        seller: {
+          select: { id: true, email: true }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    res.json({ products });
+  } catch (error) {
+    console.error('❌ Ошибка в /products:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🗑️ Удаление пользователя
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id);
+
+    // Нельзя удалять самого себя
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Нельзя удалить самого себя' });
+    }
+
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    res.json({ message: 'Пользователь удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🗑️ Удаление товара
+router.delete('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.product.delete({
+      where: { id: parseInt(id) }
+    });
+
+    res.json({ message: 'Товар удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления товара:', error);
     res.status(500).json({ error: error.message });
   }
 });
