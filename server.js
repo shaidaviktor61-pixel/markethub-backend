@@ -32,7 +32,8 @@ const categoryRoutes = require('./routes/categories');
 app.use('/api/categories', categoryRoutes);
 const reviewRoutes = require('./routes/reviews');
 app.use('/api/reviews', reviewRoutes);
-
+const paymentRoutes = require('./routes/payments');
+app.use('/api/payments', paymentRoutes);
 // Тестовый маршрут
 app.get('/', (req, res) => {
   res.json({ message: 'MarketHub API работает!' });
