@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 exports.createOrder = async (req, res) => {
   try {
     const { items, shipping_address } = req.body;
-    const buyer_id = req.user.userId; // Из JWT токена
+    const buyer_id = req.user.userId; // Из JWT токена (UUID)
 
     // Валидация
     if (!items || items.length === 0) {
@@ -26,7 +26,7 @@ exports.createOrder = async (req, res) => {
       // 1. Создаем заказ
       const newOrder = await tx.order.create({
         data: {
-          buyer_id,
+          buyer_id, // ✅ UUID (строка)
           total_amount,
           shipping_address,
           status: 'PENDING'
@@ -37,9 +37,9 @@ exports.createOrder = async (req, res) => {
       for (const item of items) {
         await tx.orderItem.create({
           data: {
-            order_id: newOrder.id,
-            product_id: item.id,
-            seller_id: item.seller_id,
+            order_id: newOrder.id, // ✅ UUID (строка)
+            product_id: item.id, // ✅ UUID (строка)
+            seller_id: item.seller_id, // ✅ UUID (строка)
             title: item.title,
             price: parseFloat(item.price),
             quantity: item.quantity
@@ -48,7 +48,7 @@ exports.createOrder = async (req, res) => {
 
         // 3. Уменьшаем остаток товара
         await tx.product.update({
-          where: { id: item.id },
+          where: { id: item.id }, // ✅ UUID (строка)
           data: {
             stock_quantity: {
               decrement: item.quantity
@@ -63,7 +63,7 @@ exports.createOrder = async (req, res) => {
     res.status(201).json({
       message: 'Заказ создан',
       order: {
-        id: order.id,
+        id: order.id, // ✅ UUID (строка)
         total_amount: order.total_amount,
         status: order.status,
         created_at: order.created_at
@@ -79,10 +79,10 @@ exports.createOrder = async (req, res) => {
 // Получение заказов пользователя
 exports.getUserOrders = async (req, res) => {
   try {
-    const buyer_id = req.user.userId;
+    const buyer_id = req.user.userId; // ✅ UUID (строка)
 
     const orders = await prisma.order.findMany({
-      where: { buyer_id },
+      where: { buyer_id }, // ✅ UUID (строка)
       include: {
         items: {
           include: {
@@ -108,16 +108,17 @@ exports.getUserOrders = async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
+
 // Получение деталей заказа по ID
 exports.getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
-    const buyer_id = req.user.userId;
+    const buyer_id = req.user.userId; // ✅ UUID (строка)
 
     const order = await prisma.order.findUnique({
       where: { 
-        id: parseInt(id),
-        buyer_id // Проверяем, что заказ принадлежит этому пользователю
+        id: id, // ✅ Убрали parseInt (теперь строка UUID)
+        buyer_id // ✅ UUID (строка)
       },
       include: {
         items: {

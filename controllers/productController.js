@@ -16,11 +16,11 @@ exports.createProduct = async (req, res) => {
       data: {
         title,
         description,
-        price: parseFloat(price), // Преобразуем в число
+        price: parseFloat(price), // Преобразуем в число (оставляем)
         stock_quantity: stock_quantity || 0,
-        category_id: parseInt(category_id),
+        category_id: category_id, // ✅ Убрали parseInt (теперь строка UUID)
         image_url,
-        seller_id: req.user.userId // Берем ID продавца из токена!
+        seller_id: req.user.userId // Берем ID продавца из токена (UUID)
       }
     });
 
@@ -72,7 +72,7 @@ exports.getProductById = async (req, res) => {
     const { id } = req.params;
 
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: id }, // ✅ Убрали parseInt (теперь строка UUID)
       include: {
         seller: {
           select: {
@@ -95,13 +95,14 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
+
 // Получение товаров текущего продавца
 exports.getSellerProducts = async (req, res) => {
   try {
     const seller_id = req.user.userId;
 
     const products = await prisma.product.findMany({
-      where: { seller_id },
+      where: { seller_id: seller_id }, // ✅ seller_id уже строка (UUID)
       include: {
         category: {
           select: {
@@ -131,20 +132,21 @@ exports.deleteProduct = async (req, res) => {
 
     // Проверяем, что товар принадлежит этому продавцу
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: id } // ✅ Убрали parseInt (теперь строка UUID)
     });
 
     if (!product) {
       return res.status(404).json({ error: 'Товар не найден' });
     }
 
+    // ✅ Сравниваем строки напрямую (UUID)
     if (product.seller_id !== seller_id) {
       return res.status(403).json({ error: 'Нет прав на удаление этого товара' });
     }
 
     // Удаляем товар
     await prisma.product.delete({
-      where: { id: parseInt(id) }
+      where: { id: id } // ✅ Убрали parseInt
     });
 
     res.json({ message: 'Товар удален' });

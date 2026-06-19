@@ -70,7 +70,7 @@ router.patch('/users/:id/role', async (req, res) => {
     }
 
     const user = await prisma.user.update({
-      where: { id: parseInt(id) },
+      where: { id: id }, // ✅ Убрали parseInt (теперь строка UUID)
       data: { role }
     });
 
@@ -121,7 +121,7 @@ router.patch('/orders/:id/status', async (req, res) => {
     }
 
     const order = await prisma.order.update({
-      where: { id: parseInt(id) },
+      where: { id: id }, // ✅ Убрали parseInt (теперь строка UUID)
       data: { status }
     });
 
@@ -158,15 +158,15 @@ router.get('/products', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = parseInt(id);
+    const userId = id; // ✅ Убрали parseInt (теперь строка UUID)
 
     // Нельзя удалять самого себя
-    if (userId === req.user.id) {
+    if (userId === req.user.id) { // ✅ Сравниваем строки (UUID)
       return res.status(400).json({ error: 'Нельзя удалить самого себя' });
     }
 
     await prisma.user.delete({
-      where: { id: userId }
+      where: { id: userId } // ✅ Строка (UUID)
     });
 
     res.json({ message: 'Пользователь удалён' });
@@ -182,7 +182,7 @@ router.delete('/products/:id', async (req, res) => {
     const { id } = req.params;
 
     await prisma.product.delete({
-      where: { id: parseInt(id) }
+      where: { id: id } // ✅ Убрали parseInt (теперь строка UUID)
     });
 
     res.json({ message: 'Товар удалён' });

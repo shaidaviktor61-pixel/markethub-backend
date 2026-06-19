@@ -8,17 +8,21 @@ datasource db {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
+  id            String    @id @default(uuid())  // ✅ UUID вместо Int
   email         String    @unique
   password_hash String
   role          Role      @default(BUYER)
+  is_banned     Boolean   @default(false)
+  ban_reason    String?
+  ban_until     DateTime?
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
   
   products      Product[]
   orders        Order[]
   order_items   OrderItem[]
-  reviews       Review[] 
+  reviews       Review[]
+  notifications Notification[]
 }
 
 enum Role {
@@ -28,11 +32,11 @@ enum Role {
 }
 
 model Category {
-  id        Int        @id @default(autoincrement())
+  id        String    @id @default(uuid())  // ✅ UUID
   name      String
-  slug      String     @unique
-  parent_id Int?
-  created_at DateTime  @default(now())
+  slug      String    @unique
+  parent_id String?   // ✅ UUID (внешний ключ)
+  created_at DateTime @default(now())
   
   parent    Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
   children  Category[] @relation("CategoryTree")
@@ -40,9 +44,9 @@ model Category {
 }
 
 model Product {
-  id             Int           @id @default(autoincrement())
-  seller_id      Int
-  category_id    Int
+  id             String        @id @default(uuid())  // ✅ UUID
+  seller_id      String        // ✅ UUID
+  category_id    String        // ✅ UUID
   title          String
   description    String?
   price          Decimal       @db.Decimal(10, 2)
@@ -55,7 +59,7 @@ model Product {
   seller         User          @relation(fields: [seller_id], references: [id])
   category       Category      @relation(fields: [category_id], references: [id])
   order_items    OrderItem[]
-  reviews Review[]
+  reviews        Review[]
 }
 
 enum ProductStatus {
@@ -65,8 +69,8 @@ enum ProductStatus {
 }
 
 model Order {
-  id               Int         @id @default(autoincrement())
-  buyer_id         Int
+  id               String      @id @default(uuid())  // ✅ UUID
+  buyer_id         String      // ✅ UUID
   total_amount     Decimal     @db.Decimal(10, 2)
   status           OrderStatus @default(PENDING)
   shipping_address String
@@ -85,10 +89,10 @@ enum OrderStatus {
 }
 
 model OrderItem {
-  id         Int     @id @default(autoincrement())
-  order_id   Int
-  product_id Int
-  seller_id  Int
+  id         String  @id @default(uuid())  // ✅ UUID
+  order_id   String  // ✅ UUID
+  product_id String  // ✅ UUID
+  seller_id  String  // ✅ UUID
   title      String
   price      Decimal @db.Decimal(10, 2)
   quantity   Int
@@ -97,10 +101,11 @@ model OrderItem {
   product    Product @relation(fields: [product_id], references: [id])
   seller     User    @relation(fields: [seller_id], references: [id])
 }
+
 model Review {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  product_id Int
+  id         String   @id @default(uuid())  // ✅ UUID
+  user_id    String   // ✅ UUID
+  product_id String   // ✅ UUID
   rating     Int
   comment    String?
   created_at DateTime @default(now())
@@ -109,4 +114,23 @@ model Review {
   product Product @relation(fields: [product_id], references: [id])
   
   @@unique([user_id, product_id])
+}
+
+model Notification {
+  id         String           @id @default(uuid())  // ✅ UUID
+  user_id    String           // ✅ UUID
+  title      String
+  message    String
+  type       NotificationType @default(INFO)
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+  
+  user       User             @relation(fields: [user_id], references: [id])
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  BAN
 }

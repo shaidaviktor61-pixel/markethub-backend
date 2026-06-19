@@ -18,7 +18,7 @@ exports.createReview = async (req, res) => {
 
     // Проверяем, что товар существует
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(product_id) }
+      where: { id: product_id } // ✅ Убрали parseInt (теперь строка UUID)
     });
 
     if (!product) {
@@ -30,7 +30,7 @@ exports.createReview = async (req, res) => {
       where: {
         user_id_product_id: {
           user_id,
-          product_id: parseInt(product_id)
+          product_id: product_id // ✅ Убрали parseInt (теперь строка UUID)
         }
       }
     });
@@ -43,8 +43,8 @@ exports.createReview = async (req, res) => {
     const review = await prisma.review.create({
       data: {
         user_id,
-        product_id: parseInt(product_id),
-        rating: parseInt(rating),
+        product_id: product_id, // ✅ Убрали parseInt (теперь строка UUID)
+        rating: parseInt(rating), // ✅ Оставляем parseInt для rating (число)
         comment: comment || null
       },
       include: {
@@ -71,7 +71,7 @@ exports.getProductReviews = async (req, res) => {
     const { product_id } = req.params;
 
     const reviews = await prisma.review.findMany({
-      where: { product_id: parseInt(product_id) },
+      where: { product_id: product_id }, // ✅ Убрали parseInt (теперь строка UUID)
       include: {
         user: {
           select: {
