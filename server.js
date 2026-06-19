@@ -36,19 +36,26 @@ app.get('/', (req, res) => {
   res.json({ message: 'MarketHub API работает!' });
 });
 
-// Проверка подключения к БД
+// ✅ ИСПРАВЛЕННЫЙ маршрут для проверки БД
 app.get('/test-db', async (req, res) => {
   try {
-    const users = await prisma.user.findMany({select: {
-      id: true,
-      email: true,
-      role: true,
-      created_at: true
-    }
-  });
-    res.json({ message: 'БД подключена!', users });
+    // Убираем select и просто получаем всех пользователей
+    const users = await prisma.user.findMany();
+    res.json({ 
+      message: 'БД подключена!', 
+      users: users.map(user => ({
+        id: user.id,      // Теперь строка (UUID)
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at
+      }))
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка проверки БД:', error);
+    res.status(500).json({ 
+      error: 'Ошибка подключения к БД', 
+      details: error.message 
+    });
   }
 });
 
