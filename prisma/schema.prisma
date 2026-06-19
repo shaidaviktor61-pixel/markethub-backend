@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password_hash String
+  role          Role      @default(BUYER)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  products      Product[]
+  orders        Order[]
+  order_items   OrderItem[]
+  reviews       Review[] 
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String
+  slug      String     @unique
+  parent_id Int?
+  created_at DateTime  @default(now())
+  
+  parent    Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+}
+
+model Product {
+  id             Int           @id @default(autoincrement())
+  seller_id      Int
+  category_id    Int
+  title          String
+  description    String?
+  price          Decimal       @db.Decimal(10, 2)
+  stock_quantity Int           @default(0)
+  image_url      String?
+  status         ProductStatus @default(ACTIVE)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  
+  seller         User          @relation(fields: [seller_id], references: [id])
+  category       Category      @relation(fields: [category_id], references: [id])
+  order_items    OrderItem[]
+  reviews Review[]
+}
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  SOLD_OUT
+}
+
+model Order {
+  id               Int         @id @default(autoincrement())
+  buyer_id         Int
+  total_amount     Decimal     @db.Decimal(10, 2)
+  status           OrderStatus @default(PENDING)
+  shipping_address String
+  created_at       DateTime    @default(now())
+  
+  buyer            User        @relation(fields: [buyer_id], references: [id])
+  items            OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  order_id   Int
+  product_id Int
+  seller_id  Int
+  title      String
+  price      Decimal @db.Decimal(10, 2)
+  quantity   Int
+  
+  order      Order   @relation(fields: [order_id], references: [id])
+  product    Product @relation(fields: [product_id], references: [id])
+  seller     User    @relation(fields: [seller_id], references: [id])
+}
+model Review {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  rating     Int
+  comment    String?
+  created_at DateTime @default(now())
+  
+  user    User    @relation(fields: [user_id], references: [id])
+  product Product @relation(fields: [product_id], references: [id])
+  
+  @@unique([user_id, product_id])
+}
