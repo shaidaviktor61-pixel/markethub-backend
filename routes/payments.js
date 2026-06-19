@@ -11,6 +11,14 @@ router.post('/create-payment', async (req, res) => {
   try {
     const { orderId, amount, description } = req.body;
 
+    // ✅ Преобразуем amount в число
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+    // Проверяем, что amount — валидное число
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ error: 'Неверная сумма платежа' });
+    }
+
     // Проверяем заказ
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -23,7 +31,7 @@ router.post('/create-payment', async (req, res) => {
     // Данные для ЮKassa
     const paymentData = {
       amount: {
-        value: amount.toFixed(2),
+        value: numericAmount.toFixed(2), // ✅ Теперь работает
         currency: 'RUB',
       },
       confirmation: {
@@ -70,7 +78,7 @@ router.post('/create-payment', async (req, res) => {
       status: payment.status,
     });
   } catch (error) {
-    console.error('Ошибка создания платежа:', error);
+    console.error('❌ Ошибка создания платежа:', error);
     res.status(500).json({ 
       error: error.response?.data?.description || error.message 
     });
@@ -82,6 +90,8 @@ router.post('/webhook', async (req, res) => {
   try {
     const event = req.body;
     const payment = event.object;
+
+    console.log('📩 Получен вебхук:', event.type);
 
     if (event.type === 'payment.succeeded') {
       const orderId = payment.metadata.order_id;
@@ -108,7 +118,7 @@ router.post('/webhook', async (req, res) => {
 
     res.json({ received: true });
   } catch (error) {
-    console.error('Ошибка обработки вебхука:', error);
+    console.error('❌ Ошибка обработки вебхука:', error);
     res.status(500).json({ error: error.message });
   }
 });
