@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { verifyToken, isAdmin } = require('../middleware/auth');
 
+
 // Все маршруты защищены — только для админов
 router.use(verifyToken, isAdmin);
 
