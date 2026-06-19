@@ -7,10 +7,9 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
-// ✅ ИСПРАВЛЕННЫЙ CORS
+// ✅ CORS — разрешаем все домены (для разработки и тестирования)
 app.use(cors({
-  origin: 'https://markethub-frontend-nu.vercel.app', // Ваш фронтенд на Vercel
-  credentials: true,
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -39,7 +38,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'MarketHub API работает!' });
 });
 
-// ✅ ИСПРАВЛЕННЫЙ маршрут для проверки БД
+// ✅ Маршрут для проверки БД
 app.get('/test-db', async (req, res) => {
   try {
     const users = await prisma.user.findMany();
