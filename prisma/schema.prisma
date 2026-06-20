@@ -32,10 +32,10 @@ enum Role {
 }
 
 model Category {
-  id        String    @id @default(uuid())  // ✅ UUID
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
   slug      String    @unique
-  parent_id String?   // ✅ UUID (внешний ключ)
+  parent_id String?
   created_at DateTime @default(now())
   
   parent    Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
